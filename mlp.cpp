@@ -10,7 +10,8 @@
  #include <fstream>
  #include <cmath>
  #include <algorithm>
- #include <omp.h>
+//  #include <omp.h>
+ #include "omp_config.h"
  #include <cassert>
  #include <random>
  
@@ -18,6 +19,8 @@
  
  MLP::MLP(int inputSize, const vector<int>& hiddenSizes, int outputSize) 
      : inputSize(inputSize), hiddenSizes(hiddenSizes), outputSize(outputSize) {
+        
+        setup_openmp_threads();
      
      // Initialize random number generator
      random_device rd;
@@ -143,22 +146,43 @@
      }
  }
  
- void MLP::updateWeights(const vector<float>& input, float learningRate) {
-     // Update weights and biases for each layer
-     for (size_t layer = 0; layer < weights.size(); ++layer) {
-         int numNeurons = weights[layer].size();
-         int prevLayerSize = activations[layer].size();
+//  void MLP::updateWeights(const vector<float>& input, float learningRate) {
+//      // Update weights and biases for each layer
+//      for (size_t layer = 0; layer < weights.size(); ++layer) {
+//          int numNeurons = weights[layer].size();
+//          int prevLayerSize = activations[layer].size();
          
-         #pragma omp parallel for collapse(2)
-         for (int j = 0; j < numNeurons; ++j) {
-             for (int i = 0; i < prevLayerSize; ++i) {
-                 weights[layer][j][i] -= learningRate * deltas[layer+1][j] * activations[layer][i];
-             }
-             biases[layer][j] -= learningRate * deltas[layer+1][j];
-         }
-     }
- }
+//          #pragma omp parallel for collapse(2)
+//          for (int j = 0; j < numNeurons; ++j) {
+//              for (int i = 0; i < prevLayerSize; ++i) {
+//                  weights[layer][j][i] -= learningRate * deltas[layer+1][j] * activations[layer][i];
+//              }
+//              biases[layer][j] -= learningRate * deltas[layer+1][j];
+//          }
+//      }
+//  }
  
+void MLP::updateWeights(const vector<float>& input, float learningRate) {
+    for (size_t layer = 0; layer < weights.size(); ++layer) {
+        int numNeurons    = weights[layer].size();
+        int prevLayerSize = activations[layer].size();
+
+        // Parallelize the full grid of (j,i) updates
+        #pragma omp parallel for collapse(2)
+        for (int j = 0; j < numNeurons; ++j) {
+            for (int i = 0; i < prevLayerSize; ++i) {
+                weights[layer][j][i] -= learningRate * deltas[layer+1][j] * activations[layer][i];
+            }
+        }
+
+        // Then do the bias update in its own parallel loop
+        #pragma omp parallel for
+        for (int j = 0; j < numNeurons; ++j) {
+            biases[layer][j] -= learningRate * deltas[layer+1][j];
+        }
+    }
+}
+
  void MLP::train(const vector<float>& X, const vector<int>& y, int numSamples, int numFeatures, 
                 int epochs, float learningRate) {
      cout << "Starting MLP training with " << numSamples << " samples..." << endl;

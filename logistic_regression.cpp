@@ -9,7 +9,8 @@
  #include <iostream>
  #include <fstream>
  #include <cmath>
- #include <omp.h>
+//  #include <omp.h>
+#include "omp_config.h"
  #include <algorithm>
  #include <cassert>
  
@@ -17,6 +18,8 @@
  
  LogisticRegression::LogisticRegression(int numFeatures, float learningRate, int maxIterations)
      : numFeatures(numFeatures), learningRate(learningRate), maxIterations(maxIterations), bias(0.0f) {
+
+        setup_openmp_threads();
      
      // Initialize random number generator
      random_device rd;
@@ -66,14 +69,21 @@
              }
          }
          
-         // Merge thread-local gradients
-         #pragma omp critical
-         {
-             biasGradient += threadBiasGradient;
-             for (int j = 0; j < numFeatures; ++j) {
-                 gradient[j] += threadGradient[j];
-             }
-         }
+      
+      
+        #pragma omp critical
+        {
+            biasGradient += threadBiasGradient;
+        }
+
+        // Atomically accumulate each feature element
+        for (int j = 0; j < numFeatures; ++j) {
+            #pragma omp atomic
+            gradient[j] += threadGradient[j];
+        }
+
+
+
      }
      
      // Normalize by number of samples

@@ -1,0 +1,40 @@
+{
+    "name": "Hybrid Parallel ML Environment",
+    "image": "mcr.microsoft.com/devcontainers/cpp:ubuntu-22.04",
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": "true",
+            "configureZshAsDefaultShell": "true"
+        }
+    },
+    "runArgs": [
+        "--cap-add=SYS_PTRACE",
+        "--security-opt", "seccomp=unconfined"
+    ],
+ 
+    "hostRequirements": {
+        "cpus": 8,
+        "memory": "8gb",
+        "storage": "32gb"
+    },
+   
+    "postCreateCommand": "apt-get update && apt-get install -y mpich libmpich-dev bc && git config --global --add safe.directory ${containerWorkspaceFolder}",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools",
+                "ms-vscode.makefile-tools"
+            ],
+            "settings": {
+                "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools"
+            }
+        }
+    },
+  
+    "remoteEnv": {
+        "OMP_NUM_THREADS": "5",
+        "OMP_PROC_BIND": "close",
+        "OMP_PLACES": "cores"
+    }
+}

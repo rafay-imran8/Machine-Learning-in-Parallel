@@ -63,25 +63,45 @@
  
  // Function to make ensemble prediction
  string makePrediction(const vector<float>& features) {
+     // Initialize models with proper constructors
+     // For Random Forest, we need to specify number of trees, max depth, min samples per leaf, and number of features
+     RandomForest rf(100, 10, 5, 5);  // 100 trees, max depth 10, min 5 samples per leaf, 5 features
+     // For MLP, we need to specify network architecture
+     MLP mlp(5, {10, 5}, 1);  // 5 input features, two hidden layers (10 and 5 neurons), 1 output
+     // For Logistic Regression, we need to specify number of features
+     LogisticRegression lr(5);  // 5 input features
+     
      // Load models
-     RandomForest rf;
-     MLP mlp;
-     LogisticRegression lr;
-     
-     bool rfLoaded = rf.loadModel("random_forest_model.bin");
-     bool mlpLoaded = mlp.loadModel("mlp_model.bin");
-     bool lrLoaded = lr.loadModel("logistic_regression_model.bin");
-     
-     if (!rfLoaded || !mlpLoaded || !lrLoaded) {
-         cerr << "Error: Failed to load one or more models." << endl;
+     try {
+         // RandomForest requires prefix and number of trees
+         rf.loadModel("random_forest_model", 100);  // Adjust number of trees as needed
+         
+         // MLP and LogisticRegression just need filename
+         mlp.loadModel("mlp_model.bin");
+         lr.loadModel("logistic_regression_model.bin");
+     } catch (const exception& e) {
+         cerr << "Error loading models: " << e.what() << endl;
          cerr << "Make sure you have trained the models first using the hybrid_train application." << endl;
          return "Unknown";
      }
      
      // Make predictions
+     // RandomForest returns a single int directly
      int rf_prediction = rf.predict(features);
-     int mlp_prediction = mlp.predict(features);
-     int lr_prediction = lr.predict(features);
+     
+     // For MLP and LogisticRegression, we need to adjust for their interface
+     vector<int> mlp_predictions = mlp.predict(features, 1, 5);
+     vector<int> lr_predictions = lr.predict(features, 1, 5);
+     
+     // Check if we got valid predictions from MLP and LR
+     if (mlp_predictions.empty() || lr_predictions.empty()) {
+         cerr << "Error: One or more models failed to return predictions." << endl;
+         return "Unknown";
+     }
+     
+     // Get the individual predictions
+     int mlp_prediction = mlp_predictions[0];
+     int lr_prediction = lr_predictions[0];
      
      // Ensemble voting (majority vote)
      int votes_approve = (rf_prediction == 1) + (mlp_prediction == 1) + (lr_prediction == 1);
@@ -104,14 +124,16 @@
  
  // Calculate risk score based on model confidences
  float calculateRiskScore(const vector<float>& features, LogisticRegression& lr, MLP& mlp) {
-     // Get probability from Logistic Regression (assumed to return probability)
-     float lr_prob = lr.predict_proba(features);
+     // Get probability from Logistic Regression
+     vector<float> lr_probs = lr.predictProbabilities(features, 1, 5);
+     float lr_prob = lr_probs.empty() ? 0.5f : lr_probs[0];
      
-     // Get confidence from MLP (assumed to return confidence)
-     float mlp_conf = mlp.predict_confidence(features);
+     // For MLP, we'll use the binary prediction as a proxy for confidence
+     int mlp_pred = mlp.predict(features, 1, 5)[0];
+     float mlp_conf = (mlp_pred == 1) ? 0.8f : 0.2f;
      
      // Combine into risk score (0-100, higher is safer)
-     float risk_score = (lr_prob * 0.5 + mlp_conf * 0.5) * 100.0f;
+     float risk_score = (lr_prob * 0.5f + mlp_conf * 0.5f) * 100.0f;
      return risk_score;
  }
  
@@ -122,12 +144,21 @@
      cout << "\n===== Final Decision =====" << endl;
      cout << "Loan Application Status: " << prediction << endl;
      
-     // Load models for risk score (if needed)
-     LogisticRegression lr;
-     MLP mlp;
-     if (lr.loadModel("logistic_regression_model.bin") && mlp.loadModel("mlp_model.bin")) {
+     // Create and load models for risk score
+     try {
+         // Initialize models properly
+         LogisticRegression lr(5);
+         MLP mlp(5, {10, 5}, 1);
+         
+         // Load the models
+         lr.loadModel("logistic_regression_model.bin");
+         mlp.loadModel("mlp_model.bin");
+         
+         // Calculate and display risk score
          float risk_score = calculateRiskScore(features, lr, mlp);
          cout << "Risk Assessment Score: " << fixed << setprecision(1) << risk_score << "/100" << endl;
+     } catch (const exception& e) {
+         cerr << "Warning: Could not calculate risk score. " << e.what() << endl;
      }
      
      return 0;

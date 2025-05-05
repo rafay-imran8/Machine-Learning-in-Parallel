@@ -13,6 +13,7 @@
  #include <algorithm>
  #include <numeric>
  #include <fstream>
+ #include "omp_config.h"
  #include <chrono>
  
  // Decision Tree implementation
@@ -47,8 +48,8 @@
                             const std::vector<int>& sampleIndices, int depth) {
      Node* node = new Node();
      
-     // Check stopping criteria
-     if (depth >= maxDepth || sampleIndices.size() <= minSamplesLeaf) {
+     // Check stopping criteria - using static_cast to avoid signed/unsigned comparison
+     if (depth >= maxDepth || sampleIndices.size() <= static_cast<size_t>(minSamplesLeaf)) {
          node->isLeaf = true;
          
          // Determine the most common class
@@ -146,13 +147,14 @@
      int bestFeatureIndex = -1;
      float bestThreshold = 0.0f;
      
-     // Get parent gini impurity
-     float parentGini = calculateGini(y, sampleIndices);
+     // Removing unused parentGini calculation
+     // float parentGini = calculateGini(y, sampleIndices);
      
      // Parallelized search for the best split across features and thresholds
+     // Using size_t for loop counters to avoid signed/unsigned comparison warnings
      #pragma omp parallel for collapse(2) schedule(dynamic) shared(bestGini, bestFeatureIndex, bestThreshold)
-     for (int f = 0; f < featureIndices.size(); ++f) {
-         for (int s = 0; s < sampleIndices.size(); ++s) {
+     for (size_t f = 0; f < featureIndices.size(); ++f) {
+         for (size_t s = 0; s < sampleIndices.size(); ++s) {
              int featureIndex = featureIndices[f];
              int sampleIndex = sampleIndices[s];
              float threshold = X[sampleIndex * numFeatures + featureIndex];
@@ -167,8 +169,9 @@
                  }
              }
              
-             // Skip if the split is too unbalanced
-             if (leftIndices.size() < minSamplesLeaf || rightIndices.size() < minSamplesLeaf) {
+             // Skip if the split is too unbalanced - using static_cast for comparison
+             if (leftIndices.size() < static_cast<size_t>(minSamplesLeaf) || 
+                 rightIndices.size() < static_cast<size_t>(minSamplesLeaf)) {
                  continue;
              }
              
@@ -286,6 +289,8 @@
  // Random Forest implementation
  RandomForest::RandomForest(int numTrees, int maxDepth, int minSamplesLeaf, int numFeatures)
      : numTrees(numTrees), maxDepth(maxDepth), minSamplesLeaf(minSamplesLeaf), numFeatures(numFeatures) {
+     // Setup OpenMP threads according to configuration
+     setup_openmp_threads();
      trees.resize(numTrees);
  }
  

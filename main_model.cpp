@@ -15,9 +15,16 @@
  #include <algorithm>
  #include <numeric>
  #include <iomanip>
+<<<<<<< HEAD
  #include "include/random_forest.h"
  #include "include/mlp.h"
  #include "include/logistic_regression.h"
+=======
+ #include "omp_config.h"
+ #include "random_forest.h"
+ #include "mlp.h"
+ #include "logistic_regression.h"
+>>>>>>> 187d6f8 (adding new files)
  
  using namespace std;
  
@@ -79,7 +86,11 @@
      int world_size, rank;
      MPI_Comm_size(MPI_COMM_WORLD, &world_size);
      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
- 
+    
+     // Set up OpenMP threads for this rank
+        setup_openmp_threads();
+        cout << "Rank " << rank << " is using " << OMP_NUM_THREADS << " OpenMP threads." << std::endl;
+
      // Check if we have the required number of processes
      if (world_size != 3) {
          if (rank == 0) {
