@@ -5,7 +5,7 @@
  * OpenMP parallelization for matrix operations.
  */
 
- #include "mlp.h"
+ #include "include/mlp.h"
  #include <iostream>
  #include <fstream>
  #include <cmath>

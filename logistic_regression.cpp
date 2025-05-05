@@ -5,7 +5,7 @@
  * gradient computation.
  */
 
- #include "logistic_regression.h"
+ #include "include/logistic_regression.h"
  #include <iostream>
  #include <fstream>
  #include <cmath>

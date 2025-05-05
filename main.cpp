@@ -149,7 +149,7 @@
 // main.cpp
 // Command-line interface for the loan data preprocessor library
 
-#include "loan_data_preprocessor.h"
+#include "include/loan_data_preprocessor.h"
 #include <iostream>
 #include <string>
 #include <chrono>

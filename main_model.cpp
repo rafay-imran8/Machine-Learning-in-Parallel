@@ -15,9 +15,9 @@
  #include <algorithm>
  #include <numeric>
  #include <iomanip>
- #include "random_forest.h"
- #include "mlp.h"
- #include "logistic_regression.h"
+ #include "include/random_forest.h"
+ #include "include/mlp.h"
+ #include "include/logistic_regression.h"
  
  using namespace std;
  

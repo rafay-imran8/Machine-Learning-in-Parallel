@@ -5,7 +5,7 @@
  * for both tree-level and feature-split calculations.
  */
 
- #include "random_forest.h"
+ #include "include/random_forest.h"
  #include <iostream>
  #include <unordered_map>
  #include <limits>
