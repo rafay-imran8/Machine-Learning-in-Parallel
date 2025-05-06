@@ -1,44 +1,41 @@
 # Makefile for Hybrid Parallel Machine Learning System
-# This makefile builds both the training and prediction executables
+# This makefile builds the preprocessing, training and prediction executables
 
 # Compiler and flags
 CXX = mpicxx
 CXXFLAGS = -std=c++17 -fopenmp -Wall -O3 -DOMP_NUM_THREADS=5
 
+# Include directory
+INCDIR = include
+
+# Source directories
+SRCDIR = src
+
 # Source files
-MAIN_SRC = main_model.cpp
+MAIN_SRC = main.cpp
+MAIN_MODEL_SRC = main_model.cpp
+PREPROCESSOR_SRC = loan_data_preprocessor.cpp
 MODEL_SRCS = logistic_regression.cpp mlp.cpp random_forest.cpp
-HEADERS = logistic_regression.h mlp.h random_forest.h omp_config.h
-
-# Object files
-MODEL_OBJS = $(MODEL_SRCS:.cpp=.o)
-MAIN_OBJ = $(MAIN_SRC:.cpp=.o)
-
-# Training executable
-TRAIN_EXEC = hybrid_ml_trainer
-
-# Prediction executable
 PRED_SRC = prediction.cpp
-PRED_OBJ = $(PRED_SRC:.cpp=.o)
+
+# Object files with their paths
+MAIN_OBJ = main.o
+MAIN_MODEL_OBJ = main_model.o
+PREPROCESSOR_OBJ = loan_data_preprocessor.o
+MODEL_OBJS = logistic_regression.o mlp.o random_forest.o
+PRED_OBJ = prediction.o
+
+# Executables
+TRAIN_EXEC = hybrid_ml_trainer
+PREPROCESSOR_EXEC = loan_preprocessor
 PRED_EXEC = ml_predictor
 
 # Default target
-all: $(TRAIN_EXEC) $(PRED_EXEC)
+all: $(PREPROCESSOR_EXEC) $(TRAIN_EXEC) $(PRED_EXEC)
 
-# Linking the training executable
-$(TRAIN_EXEC): $(MAIN_OBJ) $(MODEL_OBJS)
-	$(CXX) $(CXXFLAGS) $(MAIN_OBJ) $(MODEL_OBJS) -o $@
-
-# Linking the prediction executable
-$(PRED_EXEC): $(PRED_OBJ) $(MODEL_OBJS)
-	$(CXX) $(CXXFLAGS) $(PRED_OBJ) $(MODEL_OBJS) -o $@
-
-# Compiling source files
-%.o: %.cpp $(HEADERS)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-# Create the omp_config header if it doesn't exist
-omp_config.h:
+# Rule for creating the include directory
+$(INCDIR)/omp_config.h:
+	mkdir -p $(INCDIR)
 	echo '#ifndef OMP_CONFIG_H' > $@
 	echo '#define OMP_CONFIG_H' >> $@
 	echo '#include <omp.h>' >> $@
@@ -53,17 +50,58 @@ omp_config.h:
 	echo '' >> $@
 	echo '#endif // OMP_CONFIG_H' >> $@
 
+# Linking the preprocessing executable
+$(PREPROCESSOR_EXEC): $(MAIN_OBJ) $(PREPROCESSOR_OBJ)
+	$(CXX) $(CXXFLAGS) -I. $^ -o $@
+
+# Linking the training executable
+$(TRAIN_EXEC): $(MAIN_MODEL_OBJ) $(MODEL_OBJS)
+	$(CXX) $(CXXFLAGS) -I. $^ -o $@
+
+# Linking the prediction executable
+$(PRED_EXEC): $(PRED_OBJ) $(MODEL_OBJS)
+	$(CXX) $(CXXFLAGS) -I. $^ -o $@
+
+# Compiling source files with correct include paths
+main.o: $(SRCDIR)/main.cpp
+	$(CXX) $(CXXFLAGS) -I. -c $< -o $@
+
+main_model.o: $(SRCDIR)/main_model.cpp
+	$(CXX) $(CXXFLAGS) -I. -c $< -o $@
+
+loan_data_preprocessor.o: $(SRCDIR)/loan_data_preprocessor.cpp
+	$(CXX) $(CXXFLAGS) -I. -c $< -o $@
+
+logistic_regression.o: $(SRCDIR)/logistic_regression.cpp
+	$(CXX) $(CXXFLAGS) -I. -c $< -o $@
+
+mlp.o: $(SRCDIR)/mlp.cpp
+	$(CXX) $(CXXFLAGS) -I. -c $< -o $@
+
+random_forest.o: $(SRCDIR)/random_forest.cpp
+	$(CXX) $(CXXFLAGS) -I. -c $< -o $@
+
+prediction.o: $(SRCDIR)/prediction.cpp
+	$(CXX) $(CXXFLAGS) -I. -c $< -o $@
+
 # Clean target
 clean:
-	rm -f $(MAIN_OBJ) $(MODEL_OBJS) $(PRED_OBJ) $(TRAIN_EXEC) $(PRED_EXEC) *.bin
+	rm -f $(MAIN_OBJ) $(MAIN_MODEL_OBJ) $(PREPROCESSOR_OBJ) $(MODEL_OBJS) $(PRED_OBJ) $(TRAIN_EXEC) $(PREPROCESSOR_EXEC) $(PRED_EXEC) *.bin
 
-# Run the training with proper environment settings
-run: $(TRAIN_EXEC)
-    OMP_NUM_THREADS=5 mpirun --oversubscribe --use-hwthread-cpus -np 3 ./$(TRAIN_EXEC) processed_data.csv
+# Process raw loan data
+preprocess: $(PREPROCESSOR_EXEC)
+	./$(PREPROCESSOR_EXEC) loan_data.csv processed_data.csv
+
+# Run the training with proper environment settings (with oversubscribe for GitHub Codespaces)
+train: $(TRAIN_EXEC)
+	OMP_NUM_THREADS=5 mpirun --oversubscribe -np 3 ./$(TRAIN_EXEC) processed_data.csv
 
 # Run the prediction
 predict: $(PRED_EXEC)
 	OMP_NUM_THREADS=5 ./$(PRED_EXEC)
+
+# Full workflow
+workflow: preprocess train predict
 
 # Generate test data if needed
 test_data:
@@ -80,4 +118,4 @@ test_data:
 	done
 	@echo "Generated 1000 random samples in processed_data.csv"
 
-.PHONY: all clean run predict test_data
+.PHONY: all clean preprocess train predict workflow test_data

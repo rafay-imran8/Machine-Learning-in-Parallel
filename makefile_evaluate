@@ -1,0 +1,16 @@
+# Add these rules to your existing Makefile
+
+# Compile evaluate.cpp
+evaluate.o: src/evaluate.cpp include/evaluate.h include/random_forest.h include/mlp.h include/logistic_regression.h
+	mpicxx -std=c++17 -fopenmp -Wall -O3 -DOMP_NUM_THREADS=5 -I. -c src/evaluate.cpp -o evaluate.o
+
+# Compile model_evaluate.cpp
+model_evaluate.o: src/model_evaluate.cpp include/evaluate.h include/common.h include/csv.h
+	mpicxx -std=c++17 -fopenmp -Wall -O3 -DOMP_NUM_THREADS=5 -I. -c src/model_evaluate.cpp -o model_evaluate.o
+
+# Link model evaluator executable
+model_evaluator: model_evaluate.o evaluate.o logistic_regression.o mlp.o random_forest.o
+	mpicxx -std=c++17 -fopenmp -Wall -O3 -DOMP_NUM_THREADS=5 -I. model_evaluate.o evaluate.o logistic_regression.o mlp.o random_forest.o -o model_evaluator
+
+# Update the 'all' target to include model_evaluator
+all: loan_preprocessor hybrid_ml_trainer ml_predictor model_evaluator
