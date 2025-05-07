@@ -22,10 +22,22 @@
  vector<float> normalizeInput(float income, float credit_score, float loan_amount, float dti_ratio, int employment_status) {
      // These values should come from your training data statistics
      // For now, using reasonable ranges as example
-     const float income_mean = 70000.0f, income_std = 30000.0f;
-     const float credit_score_mean = 650.0f, credit_score_std = 100.0f;
-     const float loan_amount_mean = 150000.0f, loan_amount_std = 100000.0f;
-     const float dti_ratio_mean = 0.35f, dti_ratio_std = 0.15f;
+     // const float income_mean = 70000.0f, income_std = 30000.0f;
+     // const float credit_score_mean = 650.0f, credit_score_std = 100.0f;
+     // const float loan_amount_mean = 150000.0f, loan_amount_std = 100000.0f;
+     // const float dti_ratio_mean = 0.35f, dti_ratio_std = 0.15f;
+        const float income_mean = 110377.55f;
+        const float income_std = 51729.68f;
+        
+        const float credit_score_mean = 575.72f;
+        const float credit_score_std = 159.23f;
+        
+        const float loan_amount_mean = 44356.15f;
+        const float loan_amount_std = 34666.60f;
+        
+        const float dti_ratio_mean = 34.72f;
+        const float dti_ratio_std = 32.32f;
+
      
      vector<float> normalized(5);
      normalized[0] = (income - income_mean) / income_std;
