@@ -1,4 +1,4 @@
-# 1. Build all targets as defined in the default Makefile
+1. Build all targets as defined in the default Makefile
 make all
 
  2. Run the data preprocessor:
