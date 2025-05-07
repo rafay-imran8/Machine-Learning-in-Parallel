@@ -64,7 +64,7 @@
      cout << "Enter Loan Amount: $";
      cin >> loan_amount;
  
-     cout << "Enter Debt-to-Income Ratio (0.0-1.0): ";
+     cout << "Enter Debt-to-Income Ratio (0-100): ";
      cin >> dti_ratio;
  
      cout << "Enter Employment Status (1 = Employed, 0 = Unemployed): ";
